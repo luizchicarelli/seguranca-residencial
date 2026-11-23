@@ -5,7 +5,7 @@ Monitoramento IoT de abertura de portas e janelas com **sensor Hall** (campo mag
 | Item | Link |
 |---|---|
 | Simulação Wokwi | `COLE_O_LINK` |
-| Painel publicado | `COLE_O_LINK` |
+| Painel publicado | [Abrir painel](https://seguranca-residencial.pages.dev/) |
 | Vídeo de demonstração | `COLE_O_LINK` |
 
 ## Arquitetura (Opção B: HTTPS direto, sem MQTT)
