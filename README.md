@@ -136,6 +136,6 @@ Exemplo de lote enviado pelo ESP32:
 | Nome | Responsabilidade | Arquivos |
 |---|---|---|
 | Luiz Henrique | Banco e API (Supabase): configuração da Supabase, testes da API e do Wokwi, publicação do painel no Cloudflare Pages, links e nomes no README | `README.md`, `.gitignore`, `supabase/migrations/`, `supabase/functions/readings/index.ts`, `scripts/teste-api.ps1` |
-| Gabriel Almeida | Firmware (ESP32 / Wokwi) | `firmware/diagram.json`, `firmware/main.py` |
+| Gabriel Ermenegildo | Firmware (ESP32 / Wokwi) | `firmware/diagram.json`, `firmware/main.py` |
 | Felipe Dorta | Painel (frontend) | `frontend/index.html` |
 | Enzo Tsutsumi | Documentação: relatório, checklist e PDF do relatório | `docs/relatorio.md`, `docs/CHECKLIST.md` |
