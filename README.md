@@ -6,9 +6,9 @@ O painel mostra a **planta da casa em tempo real**: as portas e janelas deslizam
 
 | Item | Link |
 |---|---|
-| Simulação Wokwi | `COLE_O_LINK` |
+| Simulação Wokwi | [Abrir simulação](https://wokwi.com/projects/481506936104773633) |
 | Painel publicado | [Abrir painel](https://seguranca-residencial.pages.dev/) |
-| Vídeo de demonstração | `COLE_O_LINK` |
+| Vídeo de demonstração | [Assistir no YouTube](https://youtu.be/f7NLYSfg5Vc) |
 
 ## Arquitetura (Opção B: HTTPS direto, sem MQTT)
 
@@ -133,9 +133,9 @@ Exemplo de lote enviado pelo ESP32:
 
 ## Integrantes
 
-| Nome | Responsabilidade |
-|---|---|
-| `NOME 1` | Firmware / Wokwi |
-| `NOME 2` | Banco e API (Supabase) |
-| `NOME 3` | Painel / Cloudflare Pages |
-| `NOME 4` | Integração, testes, relatório e vídeo |
+| Nome | Responsabilidade | Arquivos |
+|---|---|---|
+| Luiz Henrique | Banco e API (Supabase): configuração da Supabase, testes da API e do Wokwi, publicação do painel no Cloudflare Pages, links e nomes no README | `README.md`, `.gitignore`, `supabase/migrations/`, `supabase/functions/readings/index.ts`, `scripts/teste-api.ps1` |
+| Gabriel Almeida | Firmware (ESP32 / Wokwi) | `firmware/diagram.json`, `firmware/main.py` |
+| Felipe Dorta | Painel (frontend) | `frontend/index.html` |
+| Enzo Tsutsumi | Documentação: relatório, checklist e PDF do relatório | `docs/relatorio.md`, `docs/CHECKLIST.md` |
