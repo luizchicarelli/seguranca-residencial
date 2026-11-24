@@ -1,1 +1,351 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Segurança Residencial</title>
+<style>
+  :root {
+    --bg:#eef2f7; --card:#ffffff; --text:#0f172a; --muted:#64748b; --border:#dbe3ee;
+    --ok:#16a34a; --warn:#d97706; --bad:#dc2626; --line:#2563eb; --idle:#94a3b8;
+    --floor:#f8fafc; --wall:#334155; --room:#cbd5e1;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:#0b1120; --card:#151f32; --text:#e2e8f0; --muted:#94a3b8; --border:#24324a;
+      --ok:#22c55e; --warn:#f59e0b; --bad:#f87171; --line:#60a5fa; --idle:#64748b;
+      --floor:#1b2740; --wall:#cbd5e1; --room:#334155;
+    }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:16px; font-family:system-ui, sans-serif; background:var(--bg); color:var(--text); }
+  main { max-width:1100px; margin:0 auto; }
+  h1 { font-size:1.4rem; margin:0 0 4px; }
+  h2 { font-size:1rem; margin:0 0 10px; }
+  .muted { color:var(--muted); font-size:.9rem; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px; }
+
+  #banner { margin:12px 0; padding:12px 16px; border-radius:10px; font-weight:700; color:#fff; }
+  #banner.ok { background:var(--ok); } #banner.bad { background:var(--bad); } #banner.warn { background:var(--warn); }
+
+  .grid { display:grid; grid-template-columns:2fr 1fr; gap:12px; }
+  @media (max-width:820px) { .grid { grid-template-columns:1fr; } }
+  .side { display:flex; flex-direction:column; gap:12px; }
+
+  /* Alarme */
+  #alarm-state { font-size:1.4rem; font-weight:800; margin:4px 0 10px; }
+  #alarm-state.armed { color:var(--warn); }
+  #alarm-btn { width:100%; padding:12px; border:0; border-radius:10px; font-size:1rem; font-weight:700; cursor:pointer; color:#fff; background:var(--line); }
+  #alarm-btn.armed { background:var(--wall); color:var(--card); }
+  #alarm-btn:disabled { opacity:.6; cursor:wait; }
+
+  /* Lista de sensores */
+  .sensors { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px; }
+  .sensors button { width:100%; display:flex; justify-content:space-between; align-items:center; gap:8px; padding:10px 12px;
+    border:1px solid var(--border); border-radius:10px; background:transparent; color:var(--text); cursor:pointer; text-align:left; font:inherit; }
+  .sensors button[aria-pressed="true"] { border-color:var(--line); box-shadow:0 0 0 1px var(--line) inset; }
+  .chip { font-size:.75rem; font-weight:700; padding:3px 8px; border-radius:999px; color:#fff; white-space:nowrap; background:var(--idle); }
+  .chip.ok { background:var(--ok); } .chip.open { background:var(--warn); } .chip.alert { background:var(--bad); }
+  .stale-item { opacity:.5; }
+
+  /* Planta */
+  #plan { width:100%; height:auto; display:block; }
+  .room-name { fill:var(--room); font-size:22px; font-weight:800; letter-spacing:2px; text-anchor:middle; }
+  .label { fill:var(--text); font-size:11px; font-weight:600; }
+  .label .sub { fill:var(--muted); font-weight:500; }
+  .track { stroke:var(--muted); stroke-width:1.5; stroke-dasharray:3 3; }
+  .panel { fill:var(--idle); transition:transform .8s ease, fill .3s; }
+  .opening, .pir { cursor:pointer; outline:none; }
+  .opening.ok .panel { fill:var(--ok); }
+  .opening.open .panel { fill:var(--warn); }
+  .opening.alert .panel { fill:var(--bad); animation:blink 1s infinite; }
+  .hit { fill:transparent; }
+  .selected .hit, .opening:focus-visible .hit, .pir:focus-visible .hit { stroke:var(--line); stroke-width:2; stroke-dasharray:5 3; }
+  .stale { opacity:.45; }
+  .pir-dot { fill:var(--idle); }
+  .pir.ok .pir-dot { fill:var(--ok); }
+  .pir.open .pir-dot { fill:var(--warn); }
+  .pir.alert .pir-dot { fill:var(--bad); }
+  .pir-wave { fill:none; stroke:var(--warn); stroke-width:3; opacity:0; transform-box:fill-box; transform-origin:center; }
+  .pir.open .pir-wave, .pir.alert .pir-wave { animation:wave 1.3s ease-out infinite; }
+  .pir.alert .pir-wave { stroke:var(--bad); }
+  @keyframes blink { 50% { opacity:.35; } }
+  @keyframes wave { from { transform:scale(1); opacity:.9; } to { transform:scale(3.2); opacity:0; } }
+  @media (prefers-reduced-motion: reduce) { .panel { transition:none; } .opening.alert .panel, .pir-wave { animation:none !important; } }
+
+  /* Histórico */
+  #chart { width:100%; height:140px; display:block; margin:6px 0 10px; }
+  .table-wrap { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; font-size:.9rem; }
+  th, td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--border); white-space:nowrap; }
+  .history { margin-top:12px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Segurança Residencial</h1>
+  <div class="muted">Planta em tempo real · os sensores são controlados no Wokwi · atualiza a cada 3 s</div>
+  <div id="banner" class="warn">Carregando…</div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Planta da casa</h2>
+      <svg id="plan" viewBox="0 0 600 385" aria-label="Planta da casa com portas, janelas e sensor de presença">
+        <rect x="20" y="20" width="560" height="320" fill="var(--floor)"/>
+        <text x="190" y="205" class="room-name">SALA</text>
+        <text x="470" y="205" class="room-name">QUARTO</text>
+        <rect x="20" y="20" width="560" height="320" fill="none" stroke="var(--wall)" stroke-width="10"/>
+        <line x1="360" y1="20" x2="360" y2="225" stroke="var(--wall)" stroke-width="8"/>
+        <line x1="360" y1="295" x2="360" y2="340" stroke="var(--wall)" stroke-width="8"/>
+        <g id="openings"></g>
+        <g id="pir" class="pir" data-id="presenca-sala" tabindex="0" role="button" aria-label="Sensor de presença da sala">
+          <rect class="hit" x="35" y="45" width="140" height="70" rx="6"/>
+          <circle class="pir-wave" cx="62" cy="72" r="11"/>
+          <circle class="pir-dot" cx="62" cy="72" r="9"/>
+          <text class="label" x="80" y="70">Presença<tspan class="sub" x="80" dy="14" id="pir-text">—</tspan></text>
+        </g>
+        <text x="155" y="378" class="label" text-anchor="middle" fill="var(--muted)">▲ Entrada</text>
+      </svg>
+    </div>
+
+    <div class="side">
+      <div class="card">
+        <h2>Alarme</h2>
+        <div id="alarm-state">—</div>
+        <button id="alarm-btn" type="button" disabled>…</button>
+        <div class="muted" style="margin-top:8px">Armado: qualquer abertura ou presença dispara intrusão na hora. O ESP32 recebe a mudança no próximo envio (alguns segundos).</div>
+      </div>
+      <div class="card">
+        <h2>Sensores</h2>
+        <ul class="sensors" id="sensor-list"></ul>
+        <div class="muted" style="margin-top:8px" id="updated"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card history">
+    <h2 id="history-title">Histórico</h2>
+    <div class="muted" id="history-hint"></div>
+    <svg id="chart" viewBox="0 0 500 140" preserveAspectRatio="none" role="img" aria-label="Gráfico do histórico do sensor selecionado"></svg>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Horário</th><th>Valor</th><th>Estado</th><th>Alerta</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<script>
+const API_URL  = "https://uamnpagnpwvdsnxwnvhc.supabase.co/functions/v1/readings"; // URL pública da API
+const POLL_MS  = 3000;
+const STALE_MS = 30000; // ~3x o intervalo real de envio do ESP32
+const CLOSE_MT = 30;    // mesmo limite de fechamento do firmware
+
+const SENSORS = {
+  "porta-entrada": { name: "Porta de entrada", kind: "hall" },
+  "janela-sala":   { name: "Janela da sala",   kind: "hall" },
+  "janela-quarto": { name: "Janela do quarto", kind: "hall" },
+  "presenca-sala": { name: "Presença na sala", kind: "pir"  },
+};
+// Vãos na planta: (x, y) = início do vão, len = largura, dir = parede horizontal (h) ou vertical (v)
+const OPENINGS = {
+  "porta-entrada": { x: 110, y: 340, len: 90,  dir: "h", lx: 155, ly: 296, anchor: "middle" },
+  "janela-sala":   { x: 140, y: 20,  len: 100, dir: "h", lx: 190, ly: 54,  anchor: "middle" },
+  "janela-quarto": { x: 580, y: 140, len: 100, dir: "v", lx: 556, ly: 108, anchor: "end" },
+};
+
+const $ = (id) => document.getElementById(id);
+const NS = "http://www.w3.org/2000/svg";
+const svgEl = (tag, attrs) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); return e; };
+const ago = (ms) => ms < 60000 ? `há ${Math.round(ms / 1000)} s` : `há ${Math.round(ms / 60000)} min`;
+
+let selected = "porta-entrada";
+let armed = null;
+let latest = {};
+
+// ---------- Monta a planta ----------
+for (const [id, o] of Object.entries(OPENINGS)) {
+  const h = o.dir === "h";
+  const x2 = h ? o.x + o.len : o.x, y2 = h ? o.y : o.y + o.len;
+  const g = svgEl("g", { class: "opening", "data-id": id, tabindex: 0, role: "button", "aria-label": SENSORS[id].name });
+  g.append(
+    svgEl("rect", h ? { class: "hit", x: o.x - 8, y: o.y - 20, width: o.len + 16, height: 40, rx: 6 }
+                    : { class: "hit", x: o.x - 20, y: o.y - 8, width: 40, height: o.len + 16, rx: 6 }),
+    svgEl("line", { x1: o.x, y1: o.y, x2, y2, stroke: "var(--floor)", "stroke-width": 12 }), // abre o vão na parede
+    svgEl("line", { x1: o.x, y1: o.y, x2, y2, class: "track" }),
+    svgEl("rect", h ? { class: "panel", x: o.x, y: o.y - 4, width: o.len, height: 8, rx: 2 }
+                    : { class: "panel", x: o.x - 4, y: o.y, width: 8, height: o.len, rx: 2 }),
+  );
+  const label = svgEl("text", { class: "label", x: o.lx, y: o.ly, "text-anchor": o.anchor });
+  label.textContent = SENSORS[id].name;
+  const sub = svgEl("tspan", { class: "sub", x: o.lx, dy: 14 });
+  label.append(sub);
+  g.append(label);
+  $("openings").append(g);
+}
+
+for (const [id, s] of Object.entries(SENSORS)) {
+  const li = document.createElement("li");
+  li.innerHTML = `<button type="button" data-id="${id}"><span><b></b><br><span class="muted"></span></span><span class="chip">—</span></button>`;
+  li.querySelector("b").textContent = s.name;
+  $("sensor-list").append(li);
+}
+
+function select(id) {
+  if (!SENSORS[id]) return;
+  selected = id;
+  render();
+  loadHistory();
+}
+document.addEventListener("click", (e) => {
+  const el = e.target.closest("[data-id]");
+  if (el && !e.target.closest("#alarm-btn")) select(el.dataset.id);
+});
+document.addEventListener("keydown", (e) => {
+  const el = e.target.closest?.("svg [data-id]");
+  if (el && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); select(el.dataset.id); }
+});
+
+// ---------- Estado de cada sensor ----------
+function status(id, now) {
+  const r = latest[id];
+  if (!r) return { cls: "nodata", text: "sem dados", stale: true };
+  const pir = SENSORS[id].kind === "pir";
+  const active = pir ? r.state === "motion" : r.state === "open";
+  let text = pir ? (active ? "PRESENÇA" : "sem movimento") : (active ? "ABERTA" : "FECHADA");
+  if (r.alert) text += armed ? " · INTRUSÃO" : " · ALERTA";
+  return {
+    cls: r.alert ? "alert" : active ? "open" : "ok",
+    text,
+    stale: now - new Date(r.created_at).getTime() > STALE_MS,
+    age: now - new Date(r.created_at).getTime(),
+  };
+}
+
+function render() {
+  const now = Date.now();
+
+  for (const [id, o] of Object.entries(OPENINGS)) {
+    const g = document.querySelector(`#openings [data-id="${id}"]`);
+    const st = status(id, now), r = latest[id];
+    g.setAttribute("class", `opening ${st.cls}${st.stale ? " stale" : ""}${id === selected ? " selected" : ""}`);
+    // Fechada: folha no lugar. Aberta: desliza para dentro da parede; quanto mais fraco o campo, mais aberta.
+    const frac = r && r.state === "open" ? 1 - Math.min(Math.max(r.value / CLOSE_MT, 0), 1) : 0;
+    const shift = frac * o.len * 0.85;
+    g.querySelector(".panel").style.transform = o.dir === "h" ? `translateX(${shift}px)` : `translateY(${shift}px)`;
+    g.querySelector(".sub").textContent = r ? `${st.text} · ${Number(r.value).toFixed(0)} mT` : "sem dados";
+  }
+
+  const pst = status("presenca-sala", now);
+  $("pir").setAttribute("class", `pir ${pst.cls}${pst.stale ? " stale" : ""}${selected === "presenca-sala" ? " selected" : ""}`);
+  $("pir-text").textContent = pst.text;
+
+  for (const btn of document.querySelectorAll(".sensors button")) {
+    const id = btn.dataset.id, st = status(id, now), r = latest[id];
+    btn.setAttribute("aria-pressed", id === selected);
+    btn.parentElement.className = st.stale ? "stale-item" : "";
+    btn.querySelector(".chip").className = `chip ${st.cls}`;
+    btn.querySelector(".chip").textContent = st.text;
+    btn.querySelector(".muted").textContent = r
+      ? `${SENSORS[id].kind === "pir" ? "" : Number(r.value).toFixed(1) + " mT · "}${ago(st.age)}`
+      : "nenhuma leitura";
+  }
+
+  $("alarm-state").textContent = armed === null ? "—" : armed ? "ARMADO" : "Desarmado";
+  $("alarm-state").className = armed ? "armed" : "";
+  $("alarm-btn").textContent = armed ? "Desarmar alarme" : "Armar alarme";
+  $("alarm-btn").className = armed ? "armed" : "";
+}
+
+function banner(text, cls) { $("banner").textContent = text; $("banner").className = cls; }
+
+function updateBanner() {
+  const now = Date.now();
+  const times = Object.values(latest).map((r) => new Date(r.created_at).getTime());
+  if (!times.length) return banner("Nenhuma leitura recebida ainda", "warn");
+  const newest = Math.max(...times);
+  $("updated").textContent = `Última leitura: ${new Date(newest).toLocaleTimeString("pt-BR")}`;
+  if (now - newest > STALE_MS) return banner(`DADOS DESATUALIZADOS: nenhuma leitura ${ago(now - newest)}`, "warn");
+
+  const alerts = Object.keys(SENSORS).filter((id) => latest[id]?.alert).map((id) => SENSORS[id].name);
+  if (alerts.length && armed) return banner(`INTRUSÃO DETECTADA: ${alerts.join(", ")}`, "bad");
+  if (alerts.length) return banner(`ALERTA: ${alerts.join(", ")} aberta há mais de 10 s`, "bad");
+  const open = Object.keys(OPENINGS).filter((id) => latest[id]?.state === "open").length;
+  banner(`Online · alarme ${armed ? "armado" : "desarmado"} · ${open ? `${open} abertura(s) aberta(s)` : "tudo fechado"}`, "ok");
+}
+
+// ---------- API ----------
+async function api(path = "", options) {
+  const res = await fetch(API_URL + path, options);
+  if (!res.ok) throw new Error(res.status);
+  return res.json();
+}
+
+async function refresh() {
+  try {
+    const data = await api("/status");
+    armed = data.armed;
+    latest = {};
+    for (const r of data.sensors) if (SENSORS[r.device_id]) latest[r.device_id] = r;
+    $("alarm-btn").disabled = false;
+    render();
+    updateBanner();
+  } catch (e) {
+    document.querySelectorAll(".opening, .pir").forEach((el) => el.classList.add("stale"));
+    banner("API inacessível: exibindo os últimos dados recebidos", "warn");
+  }
+}
+
+async function loadHistory() {
+  const s = SENSORS[selected], pir = s.kind === "pir";
+  $("history-title").textContent = `Histórico: ${s.name}`;
+  $("history-hint").textContent = pir
+    ? "1 = movimento detectado, 0 = sem movimento"
+    : "Linhas tracejadas = limites de abertura (20 mT) e fechamento (30 mT) · clique em outra porta ou janela na planta";
+  let list;
+  try { list = await api(`?device_id=${encodeURIComponent(selected)}&limit=40`); } catch { return; }
+  if (s !== SENSORS[selected]) return; // o usuário trocou de sensor enquanto carregava
+
+  const pts = [...list].reverse();
+  const max = pir ? 1 : Math.max(120, ...pts.map((r) => r.value));
+  const y = (v) => 132 - (v / max) * 124;
+  const x = (i) => (pts.length < 2 ? 0 : (i / (pts.length - 1)) * 500);
+  const line = pts.map((r, i) => `${x(i).toFixed(1)},${y(r.value).toFixed(1)}`).join(" ");
+  const limit = (v) => `<line x1="0" x2="500" y1="${y(v)}" y2="${y(v)}" stroke="currentColor" stroke-dasharray="4 4" opacity=".4"/>`;
+  $("chart").innerHTML = (pir ? "" : limit(20) + limit(30)) +
+    `<polyline points="${line}" fill="none" stroke="var(--line)" stroke-width="2" vector-effect="non-scaling-stroke"/>`;
+
+  const STATE = { open: "ABERTA", closed: "FECHADA", motion: "PRESENÇA", clear: "sem movimento" };
+  $("rows").innerHTML = list.map((r) =>
+    `<tr><td>${new Date(r.created_at).toLocaleString("pt-BR")}</td>` +
+    `<td>${pir ? (r.value ? "1" : "0") : Number(r.value).toFixed(1) + " mT"}</td>` +
+    `<td>${STATE[r.state] ?? "—"}</td><td>${r.alert ? "⚠ sim" : "não"}</td></tr>`).join("");
+}
+
+$("alarm-btn").addEventListener("click", async () => {
+  const btn = $("alarm-btn");
+  btn.disabled = true;
+  try {
+    const data = await api("/alarm", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ armed: !armed }),
+    });
+    armed = data.armed;
+    render();
+    updateBanner();
+  } catch (e) {
+    alert("Não foi possível alterar o alarme. Tente de novo.");
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+refresh();
+loadHistory();
+setInterval(() => { refresh(); loadHistory(); }, POLL_MS);
+</script>
+</body>
+</html>
 
