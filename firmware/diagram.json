@@ -4,18 +4,53 @@
   "editor": "wokwi",
   "parts": [
     { "type": "board-esp32-devkit-c-v4", "id": "esp", "top": 0, "left": 0, "attrs": { "env": "micropython-20231227-v1.22.0" } },
-    { "type": "wokwi-slide-potentiometer", "id": "hall", "top": -120, "left": 120,"attrs": { "travelLength": "30" } },
-    { "type": "wokwi-led", "id": "led", "top": 60, "left": 220, "attrs": { "color": "red" } },
-    { "type": "wokwi-resistor", "id": "r1", "top": 140, "left": 180, "attrs": { "value": "220" } }
+
+    { "type": "wokwi-text", "id": "t1", "top": -48, "left": -330, "attrs": { "text": "Porta de entrada (GPIO34)" } },
+    { "type": "wokwi-slide-potentiometer", "id": "hall1", "top": -30, "left": -350, "attrs": { "travelLength": "30" } },
+
+    { "type": "wokwi-text", "id": "t2", "top": 52, "left": -330, "attrs": { "text": "Janela da sala (GPIO35)" } },
+    { "type": "wokwi-slide-potentiometer", "id": "hall2", "top": 70, "left": -350, "attrs": { "travelLength": "30" } },
+
+    { "type": "wokwi-text", "id": "t3", "top": 152, "left": -330, "attrs": { "text": "Janela do quarto (GPIO32)" } },
+    { "type": "wokwi-slide-potentiometer", "id": "hall3", "top": 170, "left": -350, "attrs": { "travelLength": "30" } },
+
+    { "type": "wokwi-text", "id": "t4", "top": -110, "left": 150, "attrs": { "text": "Presença na sala (GPIO27)" } },
+    { "type": "wokwi-pir-motion-sensor", "id": "pir", "top": -90, "left": 170, "attrs": {} },
+
+    { "type": "wokwi-text", "id": "t5", "top": 80, "left": 220, "attrs": { "text": "Alerta" } },
+    { "type": "wokwi-led", "id": "led1", "top": 100, "left": 230, "attrs": { "color": "red" } },
+    { "type": "wokwi-resistor", "id": "r1", "top": 175, "left": 180, "attrs": { "value": "220" } },
+
+    { "type": "wokwi-text", "id": "t6", "top": 80, "left": 290, "attrs": { "text": "Armado" } },
+    { "type": "wokwi-led", "id": "led2", "top": 100, "left": 300, "attrs": { "color": "yellow" } },
+    { "type": "wokwi-resistor", "id": "r2", "top": 215, "left": 180, "attrs": { "value": "220" } }
   ],
   "connections": [
     [ "esp:TX", "$serialMonitor:RX", "", [] ],
     [ "esp:RX", "$serialMonitor:TX", "", [] ],
-    [ "hall:VCC", "esp:3V3", "red", [] ],
-    [ "hall:GND", "esp:GND.1", "black", [] ],
-    [ "hall:SIG", "esp:34", "green", [] ],
+
+    [ "hall1:VCC", "esp:3V3", "red", [] ],
+    [ "hall1:GND", "esp:GND.1", "black", [] ],
+    [ "hall1:SIG", "esp:34", "green", [] ],
+
+    [ "hall2:VCC", "esp:3V3", "red", [] ],
+    [ "hall2:GND", "esp:GND.1", "black", [] ],
+    [ "hall2:SIG", "esp:35", "green", [] ],
+
+    [ "hall3:VCC", "esp:3V3", "red", [] ],
+    [ "hall3:GND", "esp:GND.1", "black", [] ],
+    [ "hall3:SIG", "esp:32", "green", [] ],
+
+    [ "pir:VCC", "esp:5V", "red", [] ],
+    [ "pir:GND", "esp:GND.2", "black", [] ],
+    [ "pir:OUT", "esp:27", "violet", [] ],
+
     [ "esp:26", "r1:1", "orange", [] ],
-    [ "r1:2", "led:A", "orange", [] ],
-    [ "led:C", "esp:GND.2", "black", [] ]
+    [ "r1:2", "led1:A", "orange", [] ],
+    [ "led1:C", "esp:GND.3", "black", [] ],
+
+    [ "esp:25", "r2:1", "gold", [] ],
+    [ "r2:2", "led2:A", "gold", [] ],
+    [ "led2:C", "esp:GND.3", "black", [] ]
   ]
 }
