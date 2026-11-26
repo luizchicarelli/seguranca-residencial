@@ -43,20 +43,24 @@ O Wokwi não possui um componente de sensor Hall. A saída analógica de um Hall
 
 ```mermaid
 flowchart LR
-    H["3 sensores Hall (simulados)<br/>sliders nos GPIO34, 35 e 32"]
-    P["Sensor PIR<br/>GPIO27"]
-    E["ESP32 no Wokwi<br/>média, conversão para mT,<br/>histerese, regras de alerta"]
-    A["API REST<br/>Supabase Edge Function"]
-    D[("Postgres<br/>readings, alarm,<br/>view latest_readings")]
-    W["Painel: planta da casa<br/>Cloudflare Pages"]
-
-    H -->|"tensão analógica<br/>ADC 12 bits"| E
-    P -->|"sinal digital 0/1"| E
-    E -->|"POST: lote com os 4 sensores<br/>header x-device-key"| A
-    A -->|"resposta: alarme armado?"| E
-    W -->|"GET /status e histórico a cada 3 s"| A
-    W -->|"POST /alarm (armar/desarmar)"| A
-    A -->|"insert / select"| D
+  subgraph casa["Casa simulada no Wokwi"]
+    direction TB
+    H["3 sensores Hall<br/>GPIO 34, 35 e 32"]
+    P["Sensor PIR<br/>GPIO 27"]
+    E["ESP32 · MicroPython<br/>média, mT, histerese<br/>e regras de alerta"]
+    H -->|analógico| E
+    P -->|digital| E
+  end
+  subgraph nuvem["Supabase"]
+    direction TB
+    A["API REST<br/>Edge Function"]
+    D[("Postgres<br/>readings · alarm")]
+    A -->|grava e consulta| D
+  end
+  W["Painel<br/>planta da casa<br/>Cloudflare Pages"]
+  E ==>|"HTTPS POST<br/>lote dos 4 sensores"| A
+  A -.->|"resposta:<br/>alarme armado?"| E
+  W -->|"GET a cada 3 s<br/>POST armar"| A
 ```
 
 Usamos a Opção B, com HTTPS direto e sem MQTT:
